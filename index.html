@@ -1,0 +1,2087 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>俄语阅读助手 Pro v2.9 — Читалка Pro</title>
+  <style>
+    :root {
+      --bg: #f5f3ef; --surface: #ffffff; --surface-2: #f9f8f6;
+      --border: #e0dbd5; --border-2: #cec8bf;
+      --primary: #b91c1c; --primary-dark: #991b1b; --primary-light: #fef2f2;
+      --accent: #1e4d7b; --accent-light: #eff6ff; --accent-2: #0369a1;
+      --success: #15803d; --success-light: #f0fdf4;
+      --ai-bg: #f0fdf4; --ai-border: #86efac; --ai-text: #15803d;
+      --text: #1c1917; --text-2: #57534e; --text-muted: #a8a29e;
+      --sidebar-w: 360px; --header-h: 56px;
+      --radius: 10px; --radius-sm: 6px;
+      --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.05);
+      --shadow-lg: 0 8px 30px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08);
+      --font-ru: 'Noto Serif Display', 'Noto Sans', serif;
+      --font-body: 'Noto Sans', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      --transition: .2s cubic-bezier(.4,0,.2,1);
+    }
+    *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 15px; }
+    body {
+      font-family: var(--font-body); background: var(--bg); color: var(--text);
+      height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      height: var(--header-h); background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 18px; flex-shrink: 0;
+      position: relative; z-index: 10;
+    }
+    .logo { font-family: var(--font-ru); font-size: 17px; font-weight: 700; color: var(--primary); white-space: nowrap; letter-spacing: -0.3px; }
+    .logo-sub { color: var(--text-2); font-weight: 400; font-size: 12px; margin-left: 6px; }
+    .header-center { flex: 1; }
+    .header-right { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+    /* ===== BUTTONS ===== */
+    .btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 6px 14px; border-radius: var(--radius-sm);
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      border: 1.5px solid transparent; transition: all var(--transition);
+      white-space: nowrap; font-family: inherit; line-height: 1.4;
+    }
+    .btn:active:not(:disabled) { transform: scale(.97); }
+    .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dark); border-color: var(--primary-dark); }
+    .btn-ai {
+      background: linear-gradient(135deg, #15803d, #16a34a);
+      color: #fff; border-color: #15803d;
+    }
+    .btn-ai:hover:not(:disabled) { background: linear-gradient(135deg, #166534, #15803d); }
+    .btn-outline { background: var(--surface); color: var(--text-2); border-color: var(--border); }
+    .btn-outline:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+    .btn-accent { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .btn-ghost { background: transparent; color: var(--text-2); border-color: transparent; }
+    .btn-ghost:hover:not(:disabled) { background: var(--surface-2); color: var(--text); }
+    .btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+    .btn-sm { padding: 4px 10px; font-size: 12px; }
+    .btn-lg { padding: 9px 20px; font-size: 14px; }
+
+    /* ===== MAIN ===== */
+    main { display: flex; flex: 1; overflow: hidden; }
+
+    /* ===== READER PANEL ===== */
+    #reader-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    #reader-toolbar {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 20px; background: var(--surface);
+      border-bottom: 1px solid var(--border); flex-shrink: 0;
+    }
+    .file-name { font-size: 12.5px; color: var(--text-muted); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-name strong { color: var(--text-2); }
+    .font-controls { display: flex; align-items: center; gap: 6px; }
+    .font-controls label { font-size: 11.5px; color: var(--text-muted); }
+    .font-controls select {
+      padding: 3px 6px; border: 1px solid var(--border); border-radius: 4px;
+      font-size: 12px; background: var(--surface); cursor: pointer; font-family: inherit;
+    }
+    .font-size-slider { width: 80px; accent-color: var(--primary); cursor: pointer; }
+    .ctrl-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .ctrl-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .ctrl-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .line-height-slider { width: 60px; accent-color: var(--primary); cursor: pointer; }
+
+    /* Accent mark */
+    .accent-char { color: var(--primary); font-weight: 700; }
+    #reader-scroll { flex: 1; overflow-y: auto; background: var(--surface); }
+    #reader-scroll::-webkit-scrollbar { width: 7px; }
+    #reader-scroll::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
+
+    /* Welcome */
+    #welcome { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; gap: 18px; text-align: center; padding: 40px; }
+    .drop-zone {
+      border: 2px dashed var(--border-2); border-radius: 16px;
+      padding: 52px 60px; cursor: pointer; transition: all .2s;
+      background: var(--surface-2); max-width: 440px; width: 100%;
+    }
+    .drop-zone:hover, .drop-zone.drag-over { border-color: var(--primary); background: var(--primary-light); }
+    .drop-icon { font-size: 44px; margin-bottom: 10px; }
+    .drop-title { font-size: 15px; color: var(--text-2); margin-bottom: 6px; }
+    .drop-title strong { color: var(--primary); }
+    .drop-hint { font-size: 12.5px; color: var(--text-muted); }
+
+    /* Reader */
+    #reader-container { display: none; padding: 36px 48px 80px; max-width: 800px; margin: 0 auto; }
+    #reader-text {
+      font-family: var(--font-ru); line-height: var(--reader-line-height, 2); color: #2a2420;
+      word-break: break-word; white-space: pre-wrap;
+      font-size: 18px;
+    }
+    .sentence-block { display: inline; position: relative; }
+    .reader-paragraph { margin-bottom: 12px; line-height: var(--reader-line-height, 2); }
+    .reader-spacer { height: 8px; margin-bottom: 0; }
+    .ru-word { cursor: pointer; border-radius: 3px; padding: 1px 1px; transition: background .15s; }
+    .ru-word:hover { background: #fef9c3; }
+    .ru-word.saved { background: #dcfce7; color: var(--success); }
+
+    /* Selection bar */
+    #selection-bar {
+      position: fixed; display: none; z-index: 900;
+      background: var(--surface); border-radius: var(--radius);
+      box-shadow: var(--shadow-lg); border: 1px solid var(--border);
+      padding: 8px 10px; gap: 6px; align-items: center;
+      animation: fadeSlideIn .15s ease;
+    }
+    @keyframes fadeSlideIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    #selection-bar .sel-word { font-size: 15px; font-weight: 700; color: var(--primary); font-family: var(--font-ru); margin-right: 4px; }
+
+    /* ===== SIDEBAR ===== */
+    #sidebar { width: var(--sidebar-w); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; border-left: 1px solid var(--border); flex-shrink: 0; }
+    #sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; background: var(--surface-2); }
+    #sidebar-header h2 { font-size: 14px; font-weight: 600; flex: 1; }
+    #vocab-count { font-size: 11px; color: var(--text-muted); background: var(--border); padding: 2px 8px; border-radius: 10px; }
+
+    /* Tabs */
+    #sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab-btn { flex: 1; padding: 8px 4px; font-size: 12.5px; cursor: pointer; border: none; background: none; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all .15s; font-family: inherit; font-weight: 500; }
+    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-btn:hover:not(.active) { color: var(--text-2); }
+
+    /* Vocab list */
+    #vocab-list { flex: 1; overflow-y: auto; }
+    #vocab-list::-webkit-scrollbar { width: 5px; }
+    #vocab-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* Vocab card */
+    .vocab-card { padding: 12px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background .12s; animation: fadeSlideIn .2s ease; }
+    .vocab-card:hover { background: var(--primary-light); }
+    .vocab-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 4px; }
+    .vocab-word { font-size: 16px; font-weight: 600; color: var(--primary); font-family: var(--font-ru); flex: 1; }
+    .vocab-translation { font-size: 13px; color: #555; line-height: 1.5; }
+    .vocab-meta { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+    .vocab-tag { background: var(--accent-light); color: var(--accent); padding: 1px 7px; border-radius: 4px; font-size: 11px; border: 1px solid #bfdbfe; }
+    .vocab-time { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+    .vocab-actions { display: flex; gap: 5px; margin-top: 6px; opacity: 0; transition: opacity .15s; }
+    .vocab-card:hover .vocab-actions { opacity: 1; }
+    .vocab-actions button { font-size: 11px; padding: 3px 9px; cursor: pointer; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); font-family: inherit; transition: all .15s; }
+    .vocab-actions .edit-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+    .vocab-actions .delete-btn:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+
+    /* Empty */
+    #vocab-empty { display: flex; flex-direction: column; align-items: center; padding: 36px 20px; color: var(--text-muted); text-align: center; gap: 8px; }
+    #vocab-empty .empty-icon { font-size: 32px; }
+    #vocab-empty p { font-size: 13px; line-height: 1.5; }
+
+    /* Search bar */
+    #vocab-search { padding: 8px 12px; border-bottom: 1px solid var(--border); display: none; gap: 6px; flex-shrink: 0; }
+    #vocab-search input { flex: 1; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; background: var(--surface-2); }
+    #vocab-search input:focus { outline: none; border-color: var(--primary); background: var(--surface); }
+    #vocab-filter { padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: var(--surface-2); cursor: pointer; font-family: inherit; }
+
+    /* ===== MODAL ===== */
+    #vocab-modal, #detail-modal { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: none; align-items: center; justify-content: center; z-index: 2000; backdrop-filter: blur(2px); }
+    #vocab-modal.visible, #detail-modal.visible { display: flex; }
+    .modal-box { background: var(--surface); border-radius: 14px; padding: 28px; width: 560px; max-width: 94vw; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto; position: relative; }
+    .modal-box h3 { font-size: 17px; color: var(--primary); margin-bottom: 6px; font-family: var(--font-ru); }
+    .modal-subtitle { font-size: 12px; color: var(--text-muted); margin-bottom: 18px; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); margin-bottom: 4px; font-weight: 500; }
+    .ai-badge { background: var(--ai-bg); color: var(--ai-text); border: 1px solid var(--ai-border); padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+    .form-group input, .form-group textarea, .form-group select {
+      width: 100%; padding: 8px 12px; border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 14px; font-family: inherit; background: var(--surface-2);
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .form-group input:focus, .form-group textarea:focus, .form-group select:focus { outline: none; border-color: var(--primary); background: var(--surface); box-shadow: 0 0 0 3px rgba(185,28,28,.08); }
+
+    /* Vocab detail styles */
+    .vocab-detail { font-size: 14px; }
+    .detail-header { margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .detail-word { font-size: 24px; font-weight: 700; color: var(--primary); font-family: var(--font-ru); margin-bottom: 4px; }
+    .detail-lemma { font-size: 13px; color: var(--accent); }
+    .detail-section { margin-bottom: 12px; }
+    .detail-section label { display: block; font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+    .detail-section > div { color: var(--text); line-height: 1.5; }
+    .detail-section .vocab-tag { display: inline-block; background: var(--surface-2); padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-right: 4px; }
+    .detail-actions { margin-top: 20px; display: flex; gap: 8px; justify-content: flex-end; }
+    .form-group textarea { resize: vertical; min-height: 68px; line-height: 1.6; }
+    .form-group select { cursor: pointer; }
+    .tag-input-wrap { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+    .tag-chip { background: var(--accent-light); color: var(--accent); padding: 2px 10px; border-radius: 4px; font-size: 12px; display: flex; align-items: center; gap: 4px; cursor: pointer; border: 1px solid #bfdbfe; transition: all .15s; }
+    .tag-chip:hover { background: #bfdbfe; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+
+    /* AI loading */
+    #ai-loading-overlay { display: none; position: absolute; inset: 0; background: rgba(255,255,255,.88); border-radius: 14px; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 5; }
+    #ai-loading-overlay.visible { display: flex; }
+    .ai-spinner { width: 36px; height: 36px; border: 3px solid var(--ai-border); border-top-color: var(--success); border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .ai-loading-text { font-size: 13px; color: var(--success); font-weight: 500; }
+    .ai-loading-sub { font-size: 11.5px; color: var(--text-muted); }
+    #ai-generating-log { font-size: 11.5px; color: var(--text-muted); min-height: 16px; text-align: center; }
+
+    /* ===== IMPORT MODAL ===== */
+    #import-modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 2000; }
+    #import-modal.visible { display: flex; }
+    #import-drop { border: 2px dashed var(--border-2); border-radius: 12px; padding: 32px; text-align: center; cursor: pointer; transition: all .2s; margin: 12px 0; }
+    #import-drop:hover, #import-drop.drag-over { border-color: var(--primary); background: var(--primary-light); }
+
+    /* ===== SETTINGS ===== */
+    .settings-section { padding: 16px 14px; border-bottom: 1px solid var(--border); }
+    .settings-section h4 { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; font-weight: 600; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .settings-row label { font-size: 13px; color: var(--text-2); flex: 1; }
+    .settings-row input[type="text"], .settings-row input[type="password"] { padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; font-family: inherit; width: 200px; background: var(--surface-2); }
+    .settings-row input:focus { outline: none; border-color: var(--primary); background: var(--surface); }
+    .settings-api-status { font-size: 11.5px; padding: 3px 10px; border-radius: 10px; }
+    .settings-api-status.ok { background: var(--success-light); color: var(--success); }
+    .settings-api-status.none { background: var(--surface-2); color: var(--text-muted); }
+
+    /* ===== TOAST ===== */
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1c1917; color: #fff; padding: 10px 22px; border-radius: 24px; font-size: 13px; z-index: 3000; opacity: 0; transition: opacity .3s; pointer-events: none; white-space: nowrap; }
+    #toast.show { opacity: 1; }
+
+    /* ===== EXPORT MODAL ===== */
+    #export-modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 2000; }
+    #export-modal.visible { display: flex; }
+
+    /* ===== TRANSLATION MODAL ===== */
+    #translate-modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 2100; }
+    #translate-modal.visible { display: flex; }
+    #translate-modal .modal-box { max-width: 480px; width: 90%; }
+
+    /* ===== BOOKMARK MODAL ===== */
+    #bookmark-modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center; justify-content: center; z-index: 2000; }
+    #bookmark-modal.visible { display: flex; }
+    #bookmark-modal .modal-box { width: 480px; }
+
+    /* Bookmark list */
+    #bookmark-list { max-height: 400px; overflow-y: auto; margin: 12px 0; }
+    #bookmark-list::-webkit-scrollbar { width: 5px; }
+    #bookmark-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .bookmark-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px; border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .12s;
+    }
+    .bookmark-item:last-child { border-bottom: none; }
+    .bookmark-item:hover { background: var(--primary-light); }
+    .bookmark-icon { font-size: 20px; flex-shrink: 0; }
+    .bookmark-info { flex: 1; min-width: 0; }
+    .bookmark-file { font-size: 13px; font-weight: 500; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bookmark-meta { display: flex; gap: 8px; font-size: 11.5px; color: var(--text-muted); margin-top: 3px; }
+    .bookmark-date { background: var(--primary-light); color: var(--primary); padding: 1px 6px; border-radius: 4px; }
+    .bookmark-time { background: var(--accent-light); color: var(--accent); padding: 1px 6px; border-radius: 4px; }
+    .bookmark-pos { color: var(--text-muted); }
+    .bookmark-delete { background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px; opacity: 0; transition: opacity .15s; color: var(--text-muted); }
+    .bookmark-item:hover .bookmark-delete { opacity: 1; }
+    .bookmark-delete:hover { color: #ef4444; }
+
+    /* Bookmark empty */
+    #bookmark-empty { text-align: center; padding: 32px 16px; color: var(--text-muted); }
+    #bookmark-empty .empty-icon { font-size: 40px; margin-bottom: 10px; }
+    #bookmark-empty p { font-size: 13px; }
+
+    @media (max-width: 700px) { :root { --sidebar-w: 100%; } main { flex-direction: column; } #sidebar { width: 100%; height: 50vh; border-left: none; border-top: 1px solid var(--border); } }
+
+    /* ===== SIDEBAR FOOTER ===== */
+    #sidebar-footer {
+      flex-shrink: 0;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      background: var(--surface-2);
+    }
+    .sidebar-footer-content {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .footer-text {
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+    .footer-link {
+      font-size: 11.5px;
+      color: var(--primary);
+      text-decoration: none;
+      cursor: pointer;
+      font-weight: 500;
+      transition: color .15s;
+    }
+    .footer-link:hover {
+      color: var(--primary-dark);
+      text-decoration: underline;
+    }
+
+    /* ===== QRCODE MODAL ===== */
+    #qrcode-modal {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2200;
+    }
+    #qrcode-modal.visible { display: flex; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">📖 Читалка Pro<span class="logo-sub">俄语阅读助手</span></div>
+  <div class="header-center">
+    <span class="file-name" id="file-name-display">暂无文件</span>
+  </div>
+  <div class="header-right">
+    <button class="btn btn-outline" id="btn-import-txt">📂 导入 TXT</button>
+    <button class="btn btn-outline" id="btn-import-vocab">📥 导入生词本</button>
+    <button class="btn btn-outline" id="btn-backup">💾 备份</button>
+    <button class="btn btn-ghost" id="btn-settings">⚙️ 设置</button>
+  </div>
+</header>
+<input type="file" id="file-input-txt" accept=".txt,.text,.md,.log" style="display:none" />
+
+<!-- MAIN -->
+<main>
+  <div id="reader-panel">
+    <div id="reader-toolbar" style="display:none">
+      <div class="font-controls">
+        <label>字体</label>
+        <select id="font-select">
+          <option value="serif">衬线体</option>
+          <option value="sans">无衬线</option>
+        </select>
+        <label>字号</label>
+        <input type="range" id="font-size-slider" min="14" max="28" value="18" style="width:80px" oninput="handleFontSize()" />
+        <span id="font-size-val" style="font-size:11px;color:var(--text-muted)">18px</span>
+        <label>行距</label>
+        <input type="range" id="line-height-slider" min="1.2" max="2.5" step="0.1" value="2" class="line-height-slider" oninput="handleLineHeight()" />
+        <span id="line-height-val" style="font-size:11px;color:var(--text-muted)">2.0</span>
+        <button id="bold-btn" class="ctrl-btn" onclick="handleFontBold()" title="加粗">B</button>
+        <button id="btn-bookmark" class="ctrl-btn" title="书签">🔖</button>
+      </div>
+
+    </div>
+    <div id="reader-scroll">
+      <div id="welcome">
+        <div class="drop-zone" id="drop-zone">
+          <div class="drop-icon">📄</div>
+          <div class="drop-title">将俄语文本文件拖放到此处</div>
+          <div class="drop-hint">支持 .txt / .text / .md 等文本格式</div>
+        </div>
+        <div style="font-size:13px;color:var(--text-muted)">DeepSeek AI 智能生成释义 · 词根分析 · 记忆技巧 · 语法标注</div>
+      </div>
+      <div id="reader-container">
+        <div id="reader-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h2>📓 生词本</h2>
+      <span id="vocab-count">0 词</span>
+    </div>
+    <div id="sidebar-tabs">
+      <button class="tab-btn active" id="tab-list-btn">📋 列表</button>
+    </div>
+    <div id="vocab-search">
+      <input type="text" id="search-input" placeholder="搜索单词、释义…" />
+      <select id="vocab-filter">
+        <option value="all">全部</option>
+      </select>
+    </div>
+    <div id="vocab-list">
+      <div id="vocab-empty">
+        <div class="empty-icon">📒</div>
+        <p>暂无生词</p>
+        <p style="font-size:12px">选择文本 → 点击「🤖 AI 收录」</p>
+      </div>
+    </div>
+    <!-- SIDEBAR FOOTER: 低调公众号引导 -->
+    <div id="sidebar-footer">
+      <div class="sidebar-footer-content">
+        <span class="footer-text">更多俄语资源，欢迎关注</span>
+        <a class="footer-link" id="btn-show-qrcode">公众号「灵感小王」↗</a>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- SELECTION BAR -->
+<div id="selection-bar">
+  <span id="sel-word-display" style="font-size:15px;font-weight:700;color:var(--primary);font-family:var(--font-ru)"></span>
+  <button class="btn btn-ai btn-sm" id="btn-ai-collect">🤖 AI 收录</button>
+  <button class="btn btn-accent btn-sm" id="btn-translate" style="display:none">🌐 翻译</button>
+  <button class="btn btn-ghost btn-sm" id="btn-close-bar" style="padding:4px 8px">✕</button>
+</div>
+
+<!-- VOCAB MODAL -->
+<div id="vocab-modal">
+  <div class="modal-box">
+    <div id="ai-loading-overlay">
+      <div class="ai-spinner"></div>
+      <div class="ai-loading-text">🤖 DeepSeek 正在生成内容…</div>
+      <div class="ai-loading-sub">分析单词结构、生成记忆技巧中</div>
+      <div id="ai-generating-log"></div>
+    </div>
+    <h3 id="modal-title">🤖 AI 智能收录</h3>
+    <div class="modal-subtitle" id="modal-subtitle">正在生成单词的完整学习资料…</div>
+    <div class="form-group">
+      <label>单词 <span class="ai-badge">AI 生成</span></label>
+      <input id="modal-word" readonly />
+    </div>
+    <div class="form-group">
+      <label>原型（词典形式）</label>
+      <input id="modal-lemma" placeholder="如：идти → шёл, работать → работа" />
+    </div>
+    <div class="form-group">
+      <label>英文释义 <span class="ai-badge">AI 生成</span></label>
+      <input id="modal-english" placeholder="AI 自动生成" />
+    </div>
+    <div class="form-group">
+      <label>中文释义 <span class="ai-badge">AI 生成</span></label>
+      <input id="modal-trans" placeholder="AI 自动生成" />
+    </div>
+    <div class="form-group">
+      <label>词根词缀分析 <span class="ai-badge">AI 生成</span></label>
+      <textarea id="modal-root" placeholder="前缀 / 词根 / 后缀 / 词干分析，由 AI 自动生成"></textarea>
+    </div>
+    <div class="form-group">
+      <label>记忆技巧 <span class="ai-badge">AI 生成</span></label>
+      <textarea id="modal-memory" placeholder="记忆技巧、同源词联想，由 AI 自动生成"></textarea>
+    </div>
+    <div class="form-group">
+      <label>原文例句</label>
+      <textarea id="modal-sentence" placeholder="该单词出现的原文句子" style="min-height:56px"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btn-modal-cancel">取消</button>
+      <button class="btn btn-primary btn-lg" id="btn-modal-save">💾 保存到生词本</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div id="detail-modal">
+  <div class="modal-box" style="width:480px">
+    <h3>📖 生词详情</h3>
+    <div id="detail-content"></div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div id="import-modal">
+  <div class="modal-box" style="width:560px">
+    <h3>📥 导入生词本</h3>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:8px">支持 CSV/TSV 格式，需包含「单词」和「中文释义」两列（自动以 Tab 或逗号分隔）</p>
+    <div id="import-drop">
+      <div style="font-size:32px;margin-bottom:8px">📋</div>
+      <div style="font-size:14px;color:var(--text-2)">点击选择文件或拖放至此</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">.csv .tsv</div>
+    </div>
+    <input type="file" id="file-input-vocab" accept=".csv,.tsv" style="display:none" />
+    <div id="import-preview"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btn-import-cancel">取消</button>
+      <button class="btn btn-primary" id="btn-do-import" disabled>确认导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div id="export-modal">
+  <div class="modal-box" style="width:420px">
+    <h3>📤 导出生词本</h3>
+    <div class="form-group" style="margin-top:14px">
+      <label>日期筛选（可选）</label>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
+        <input type="date" id="export-date-from" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px" />
+        <span style="color:var(--text-muted)">至</span>
+        <input type="date" id="export-date-to" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px" />
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:5px">留空则导出全部生词 · 按收录日期升序排列</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px">
+      <button class="btn btn-outline btn-sm" id="btn-set-today">今天</button>
+      <button class="btn btn-outline btn-sm" id="btn-set-thisweek">本周</button>
+      <button class="btn btn-outline btn-sm" id="btn-clear-date">清除</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btn-export-cancel">取消</button>
+      <button class="btn btn-outline" id="btn-export-json">📋 导出 JSON</button>
+      <button class="btn btn-primary" id="btn-export-txt-modal">📝 导出 TXT</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRANSLATION MODAL -->
+<div id="translate-modal">
+  <div class="modal-box" style="max-width:480px">
+    <div id="translate-loading" style="display:none;flex-direction:column;align-items:center;gap:12px;padding:20px 0">
+      <div class="ai-spinner"></div>
+      <div class="ai-loading-text">🌐 DeepSeek 翻译中…</div>
+    </div>
+    <div id="translate-content">
+      <h3>🌐 翻译结果</h3>
+      <div class="form-group">
+        <label>原文</label>
+        <div id="translate-original" style="font-family:var(--font-ru);font-size:15px;line-height:1.6;padding:8px 10px;background:var(--surface-2);border-radius:8px;white-space:pre-wrap;word-break:break-word"></div>
+      </div>
+      <div class="form-group">
+        <label>中文翻译 <span class="ai-badge">AI 生成</span></label>
+        <div id="translate-result" style="font-size:15px;line-height:1.7;padding:10px 12px;background:var(--ai-bg);border:1.5px solid var(--ai-border);border-radius:8px;white-space:pre-wrap;word-break:break-word"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-primary" id="btn-translate-close">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BOOKMARK MODAL -->
+<div id="bookmark-modal">
+  <div class="modal-box">
+    <h3>🔖 书签</h3>
+    <div id="bookmark-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" id="btn-bookmark-add" style="margin-right:auto">➕ 添加书签</button>
+      <button class="btn btn-primary" id="btn-bookmark-close">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- QRCODE MODAL -->
+<div id="qrcode-modal">
+  <div class="modal-box" style="width:360px;text-align:center">
+    <h3 style="font-size:15px;margin-bottom:4px">📱 关注公众号「灵感小王」</h3>
+    <p style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px">获取更多俄语学习资源和软件更新</p>
+    <div>
+      <img id="qrcode-img" src="qrcode.jpg" alt="公众号二维码"
+           style="width:200px;height:200px;object-fit:contain;border-radius:8px;border:1px solid var(--border)" />
+    </div>
+    <div style="font-size:11.5px;color:var(--text-muted);margin-top:14px">
+      微信扫码关注，获取 Читалка Pro 最新版本
+    </div>
+    <div class="modal-actions" style="justify-content:center;margin-top:18px">
+      <button class="btn btn-outline" id="btn-close-qrcode">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* ===================== STATE ===================== */
+  var vocabulary = [];
+  var currentFileName = '';
+  var currentText = '';
+  var selectedWordData = null;
+  var currentTab = 'list';
+  var importParsed = [];
+  var settings = {
+    deepseekKey: '',
+    deepseekModel: 'deepseek-chat',
+    deepseekBaseUrl: 'https://api.deepseek.com'
+  };
+  var bookmarks = [];
+  var vocabWordSet = null; // 全局 Set，加速生词查找
+
+  /* ===================== UTILS ===================== */
+  var VOWELS = ['а','е','ё','и','о','у','ы','э','ю','я','А','Е','Ё','И','О','У','Ы','Э','Ю','Я'];
+  // 去除单词中的重音符号·用于显示
+  function stripAccent(word) {
+    if (!word) return '';
+    return word.replace(/·/g, '');
+  }
+  function addAccent(word) {
+    // 如果已经有重音符号·，直接返回
+    if (word.indexOf('·') !== -1) return word;
+    var len = word.length;
+    // 尝试在最后一个元音上加重音（常见规则：重音在词干最后一个元音）
+    for (var i = len - 1; i >= 0; i--) {
+      if (VOWELS.indexOf(word[i]) !== -1) {
+        return word.slice(0, i + 1) + '·' + word.slice(i + 1);
+      }
+    }
+    return word;
+  }
+  function accentHtml(word) {
+    if (!word || word.indexOf('·') === -1) return escapeHtml(word);
+    // 高亮重音点·
+    return word.replace(/([А-Яа-яёЁ])·/g, '<span class="accent-char">$1·</span>');
+  }
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(window._tt);
+    window._tt = setTimeout(function() { t.classList.remove('show'); }, 2600);
+  }
+
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escapeAttr(s) {
+    if (!s) return '';
+    return String(s).replace(/"/g,'&quot;');
+  }
+
+  function formatDateShort(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return (d.getMonth() + 1) + '月' + d.getDate() + '日';
+  }
+
+  function formatTimeHHMMSS(date) {
+    return date.toLocaleTimeString('zh-CN', { hour12: false });
+  }
+
+  function formatDate(d) {
+    return d.getFullYear() + '-' +
+      String(d.getMonth()+1).padStart(2,'0') + '-' +
+      String(d.getDate()).padStart(2,'0');
+  }
+
+  function now() {
+    var d = new Date();
+    return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0');
+  }
+
+  /* ===================== STORAGE ===================== */
+  function saveVocabStorage() {
+    try {
+      localStorage.setItem('chitalka_vocab_v4', JSON.stringify(vocabulary));
+      localStorage.setItem('chitalka_settings_v3', JSON.stringify(settings));
+      localStorage.setItem('chitalka_bookmarks', JSON.stringify(bookmarks));
+      if (currentText) {
+        localStorage.setItem('chitalka_reading_v1', JSON.stringify({
+          text: currentText,
+          fileName: currentFileName,
+          scrollTop: document.getElementById('reader-scroll') ? document.getElementById('reader-scroll').scrollTop : 0
+        }));
+      } else {
+        localStorage.removeItem('chitalka_reading_v1');
+      }
+    } catch (e) {
+      console.warn('Storage save failed:', e);
+    }
+  }
+
+  function restoreReadingProgress() {
+    try {
+      var saved = localStorage.getItem('chitalka_reading_v1');
+      if (!saved) return;
+      var data = JSON.parse(saved);
+      if (!data.text) return;
+      currentText = data.text;
+      currentFileName = data.fileName || '已恢复文档';
+      document.getElementById('welcome').style.display = 'none';
+      document.getElementById('reader-container').style.display = 'block';
+      document.getElementById('reader-toolbar').style.display = 'flex';
+      renderReaderText(currentText);
+      document.getElementById('file-name-display').innerHTML = '<strong>' + currentFileName + '</strong> · ' + currentText.length + ' 字';
+      updateBtnStates();
+      // Restore scroll position after render
+      if (data.scrollTop) {
+        var scrollEl = document.getElementById('reader-scroll');
+        if (scrollEl) scrollEl.scrollTop = data.scrollTop;
+      }
+    } catch (e) {
+      console.warn('Restore reading progress failed:', e);
+    }
+  }
+
+  function loadFromStorage() {
+    try {
+      // Migrate from older localStorage keys
+      var migrateKeys = ['chitalka_vocab', 'chitalka_vocab_v1', 'chitalka_vocab_v2', 'chitalka_vocab_v3'];
+      for (var i = 0; i < migrateKeys.length; i++) {
+        var oldV = localStorage.getItem(migrateKeys[i]);
+        if (oldV && !localStorage.getItem('chitalka_vocab_v4')) {
+          try {
+            var parsed = JSON.parse(oldV);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              vocabulary = parsed;
+              saveVocabStorage();
+              console.log('[loadFromStorage] Migrated', parsed.length, 'words from', migrateKeys[i]);
+            }
+          } catch(e2) {}
+        }
+      }
+      var v = localStorage.getItem('chitalka_vocab_v4');
+      if (v) vocabulary = JSON.parse(v);
+      var s = localStorage.getItem('chitalka_settings_v3');
+      if (s) settings = Object.assign({}, settings, JSON.parse(s));
+      var b = localStorage.getItem('chitalka_bookmarks');
+      if (b) bookmarks = JSON.parse(b);
+    } catch (e) {
+      console.warn('Storage load failed:', e);
+    }
+    syncVocabWordSet();
+    restoreReadingProgress();
+  }
+
+  /* 同步词汇 Set（O(V) 一次性建立，后续查找 O(1)） */
+  function syncVocabWordSet() {
+    vocabWordSet = new Set();
+    vocabulary.forEach(function(v) {
+      vocabWordSet.add(v.word.toLowerCase());
+    });
+  }
+
+  /* ===================== FILE LOADING ===================== */
+  function loadFile(file) {
+    console.log('[Chitalka] Loading file:', file.name, file.size, 'bytes');
+    var allowedExts = ['.txt', '.text', '.md', '.log'];
+    var ext = '.' + file.name.split('.').pop().toLowerCase();
+    if (allowedExts.indexOf(ext) === -1) {
+      showToast('仅支持 .txt / .text / .md 等文本文件');
+      return;
+    }
+    currentFileName = file.name;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      var raw = e.target.result;
+      console.log('[Chitalka] File loaded, length:', raw ? raw.length : 0);
+      if (!raw || raw.trim().length === 0) {
+        showToast('文件内容为空，请换一个文件');
+        return;
+      }
+      currentText = raw;
+      document.getElementById('welcome').style.display = 'none';
+      document.getElementById('reader-container').style.display = 'block';
+      document.getElementById('reader-toolbar').style.display = 'flex';
+      renderReaderText(currentText);
+      document.getElementById('file-name-display').innerHTML = '<strong>' + currentFileName + '</strong> · ' + raw.length + ' 字';
+      updateStats();
+      updateBtnStates();
+      saveVocabStorage();
+      showToast('已加载：' + currentFileName);
+    };
+    reader.onerror = function() {
+      console.error('[Chitalka] FileReader error');
+      showToast('文件读取失败，请尝试将文件另存为 UTF-8 编码后重试');
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  /* ===================== TEXT RENDERING ===================== */
+  function isVerb(word) {
+    return ['ать','ять','еть','ить','овать','евать'].some(function(s) {
+      return word.toLowerCase().endsWith(s);
+    });
+  }
+
+  function isNoun(word) {
+    return ['ость','ство','ание','ение','ция','ник','ница','а','о','е','ия','ий','ый'].some(function(s) {
+      return word.toLowerCase().endsWith(s);
+    });
+  }
+
+  /* 增量高亮：新增/编辑生词时，仅高亮对应的 span，不重建全文 */
+  function incrementalHighlight(entry) {
+    var targets = new Set();
+    targets.add(entry.word.toLowerCase());
+    if (entry.lemma) targets.add(entry.lemma.toLowerCase());
+    document.querySelectorAll('.ru-word').forEach(function(span) {
+      if (targets.has(span.textContent.toLowerCase())) {
+        span.classList.add('saved');
+      }
+    });
+  }
+
+  function renderReaderText(text) {
+    var container = document.getElementById('reader-text');
+    container.innerHTML = '';
+
+    // Step 1: Split into paragraphs (blank line = paragraph break)
+    var rawParagraphs = text.split(/(?:\r?\n){2,}/);
+    if (rawParagraphs.length === 1) rawParagraphs = text.split(/(?:\r?\n)(?=[A-ZА-ЯЁ])/);
+
+    rawParagraphs.forEach(function(para) {
+      // Empty line → add spacer
+      if (!para || !para.trim()) {
+        var spacer = document.createElement('div');
+        spacer.className = 'reader-paragraph reader-spacer';
+        container.appendChild(spacer);
+        return;
+      }
+
+      var pEl = document.createElement('div');
+      pEl.className = 'reader-paragraph';
+
+      // Step 2: Split paragraph into sentences (keep punctuation attached)
+      var sentences = para.split(/(?<=[.!?…»""''])(?=\s)/g);
+
+      sentences.forEach(function(seg) {
+        if (!seg || !seg.trim()) return;
+        var isWhitespace = /^\s+$/.test(seg);
+        if (isWhitespace) {
+          pEl.appendChild(document.createTextNode(seg));
+          return;
+        }
+        var span = document.createElement('span');
+        span.className = 'sentence-block';
+        var words = seg.split(/(\s+)/);
+        words.forEach(function(part) {
+          if (/^\s+$/.test(part)) { span.appendChild(document.createTextNode(part)); return; }
+          var m = part.match(/^[А-Яа-яёЁ]+/);
+          if (!m) { span.appendChild(document.createTextNode(part)); return; }
+          var word = m[0];
+          var before = part.slice(0, part.indexOf(word));
+          var after = part.slice(part.indexOf(word) + word.length);
+          if (before) span.appendChild(document.createTextNode(before));
+          var ws = document.createElement('span');
+          ws.className = 'ru-word';
+          var saved = vocabWordSet && vocabWordSet.has(word.toLowerCase());
+          if (saved) ws.classList.add('saved');
+          if (isVerb(word)) ws.classList.add('verb');
+          else if (isNoun(word)) ws.classList.add('noun');
+          ws.textContent = word;
+          ws._word = word;
+          ws._sentence = seg.trim();
+          ws.addEventListener('click', function(e) {
+            e.stopPropagation();
+            handleWordClick(ws._word, ws._sentence);
+          });
+          span.appendChild(ws);
+          if (after) span.appendChild(document.createTextNode(after));
+        });
+        pEl.appendChild(span);
+      });
+
+      container.appendChild(pEl);
+    });
+  }
+
+  /* ===================== SELECTION HANDLING ===================== */
+  var selectionTimer = null;
+
+  function handleTextSelection() {
+    clearTimeout(selectionTimer);
+    selectionTimer = setTimeout(function() {
+      var sel = window.getSelection();
+      var text = sel.toString().trim();
+      if (!text || text.length < 2) { hideSelectionBar(); return; }
+      var match = text.match(/[А-Яа-яёЁ]+/);
+      if (!match) { hideSelectionBar(); return; }
+      var word = match[0];
+      var existing = vocabulary.find(function(v) { return v.word.toLowerCase() === word.toLowerCase(); });
+      if (existing) {
+        // 已收录：显示详情而非仅提示
+        hideSelectionBar();
+        showVocabDetail(existing.id);
+        return;
+      }
+      // 统计选中的词数（空格分割），判断是否为多词
+      var wordCount = text.split(/\s+/).filter(function(w) { return w.length > 0; }).length;
+      var isMultiWord = wordCount >= 2;
+      selectedWordData = { word: word, sentence: text, isMultiWord: isMultiWord };
+      showSelectionBar(word);
+    }, 200);
+  }
+
+  function showSelectionBar(word) {
+    var bar = document.getElementById('selection-bar');
+    document.getElementById('sel-word-display').textContent = word;
+    // 多词选择时显示"翻译"，单词时显示"AI 收录"
+    var isMulti = selectedWordData && selectedWordData.isMultiWord;
+    document.getElementById('btn-ai-collect').style.display = isMulti ? 'none' : '';
+    document.getElementById('btn-translate').style.display = isMulti ? '' : 'none';
+    bar.style.display = 'flex';
+    positionBar(bar);
+  }
+
+  function positionBar(bar) {
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    var range = sel.getRangeAt(0);
+    var rect = range.getBoundingClientRect();
+    var left = rect.left + rect.width / 2 - bar.offsetWidth / 2;
+    var top = rect.top - bar.offsetHeight - 8;
+    if (top < 4) top = rect.bottom + 8;
+    left = Math.max(4, Math.min(left, window.innerWidth - bar.offsetWidth - 4));
+    bar.style.left = left + 'px';
+    bar.style.top = top + 'px';
+  }
+
+  function hideSelectionBar() {
+    document.getElementById('selection-bar').style.display = 'none';
+    selectedWordData = null;
+  }
+
+  function handleWordClick(word, sentence) {
+    var existing = vocabulary.find(function(v) { return v.word.toLowerCase() === word.toLowerCase(); });
+    if (existing) {
+      // 已收录：显示详情而非仅提示
+      showVocabDetail(existing.id);
+      return;
+    }
+    selectedWordData = { word: word, sentence: sentence };
+    openModalWithAI();
+  }
+
+  /* ===================== DEEPSEEK API ===================== */
+
+  /* 翻译：多词选区 → 中文翻译 */
+  function callDeepSeekTranslate(text) {
+    return new Promise(function(resolve, reject) {
+      if (!settings.deepseekKey) {
+        reject(new Error('NO_KEY'));
+        return;
+      }
+      var prompt = '请将以下俄语文本翻译成中文，保持原意，自然流畅。\n\n原文：' + text + '\n\n请只返回中文翻译，不要解释。';
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', settings.deepseekBaseUrl + '/chat/completions', true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + settings.deepseekKey);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            try {
+              var data = JSON.parse(xhr.responseText);
+              var content = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+              resolve(content.trim());
+            } catch(e) {
+              reject(new Error('解析失败'));
+            }
+          } else {
+            reject(new Error('API 错误 ' + xhr.status));
+          }
+        }
+      };
+      xhr.onerror = function() { reject(new Error('网络请求失败')); };
+      xhr.send(JSON.stringify({
+        model: settings.deepseekModel,
+        messages: [
+          { role: 'system', content: '你是一个专业的俄语翻译助手，将俄语文本准确翻译成中文。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 600
+      }));
+    });
+  }
+
+  function openTranslationModal() {
+    if (!selectedWordData || !selectedWordData.isMultiWord) return;
+    var original = selectedWordData.sentence;
+
+    var modal = document.getElementById('translate-modal');
+    document.getElementById('translate-original').textContent = original;
+    document.getElementById('translate-result').textContent = '';
+    document.getElementById('translate-content').style.display = 'none';
+    var loading = document.getElementById('translate-loading');
+    loading.style.display = 'flex';
+    modal.classList.add('visible');
+    hideSelectionBar();
+
+    callDeepSeekTranslate(original).then(function(translation) {
+      loading.style.display = 'none';
+      document.getElementById('translate-content').style.display = '';
+      document.getElementById('translate-result').textContent = translation;
+    }).catch(function(err) {
+      loading.style.display = 'none';
+      document.getElementById('translate-content').style.display = '';
+      if (err.message === 'NO_KEY') {
+        document.getElementById('translate-result').innerHTML = '<span style="color:var(--primary)">⚠️ 请先在「⚙️ 设置」中配置 DeepSeek API Key</span>';
+      } else {
+        document.getElementById('translate-result').textContent = '翻译失败：' + err.message;
+      }
+    });
+  }
+
+  function closeTranslationModal() {
+    document.getElementById('translate-modal').classList.remove('visible');
+  }
+  function callDeepSeek(word, context) {
+    return new Promise(function(resolve, reject) {
+      if (!settings.deepseekKey) {
+        reject(new Error('NO_KEY'));
+        return;
+      }
+      var log = document.getElementById('ai-generating-log');
+      function updateLog(msg) { if (log) log.textContent = msg; }
+
+
+      updateLog('连接 DeepSeek API…');
+      var url = settings.deepseekBaseUrl + '/chat/completions';
+      var prompt = '你是一个专业的俄语学习助手，帮我分析以下俄语单词，生成结构化的学习资料。\n\n单词：' + word + (context ? '\n原文语境：' + context : '') + '\n\n请以 JSON 格式返回，字段说明如下：\n{\n  "translation": "中文释义（精确、通俗）",\n  "english": "单词原型对应的英文翻译（简洁，1~3个词，如 to work, beautiful）",\n  "lemma": "单词原型（词典形式），如：идти（原型是идти，如果这个词本身就是原型则填相同）",\n  "lemma_accent": "原型的重音位置，用中间点标记重音元音，如 работать → работа·ть，原型是工作（ть）则填 работа·ть。如果原型没有重音变化可填与 lemma 相同。",\n  "root_analysis": "词根词缀分析，格式：词根: xxx | 前缀: xxx | 后缀: xxx",\n  "memory_tip": "记忆技巧（简短有趣，帮助记住这个单词）",\n  "example": "一个俄语例句（含中文翻译）"\n}\n\n重要：单词的重音位置请用中间点 · 标记在重音元音字母之后，例如：работа·, иду·, говори·ть\n请只返回 JSON，不要有其他文字。';
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Authorization', 'Bearer ' + settings.deepseekKey);
+      xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4) {
+          if (xhr.status === 200) {
+            updateLog('解析结果…');
+            try {
+              var data = JSON.parse(xhr.responseText);
+              var text = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || '';
+              var jsonMatch = text.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                resolve(JSON.parse(jsonMatch[0]));
+              } else {
+                reject(new Error('无法解析 AI 返回内容'));
+              }
+            } catch(e) {
+              reject(new Error('JSON 解析失败：' + e.message));
+            }
+          } else {
+            reject(new Error('API 错误 ' + xhr.status + ': ' + xhr.statusText));
+          }
+        }
+      };
+      xhr.onerror = function() { reject(new Error('网络请求失败，请检查网络连接')); };
+      xhr.send(JSON.stringify({
+        model: settings.deepseekModel,
+        messages: [
+          { role: 'system', content: '你是一个专业的俄语学习助手，帮助生成单词的学习资料。' },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.3,
+        max_tokens: 800
+      }));
+    });
+  }
+
+  /* ===================== MODAL ===================== */
+  function openModalWithAI() {
+    if (!selectedWordData) return;
+    var word = selectedWordData.word;
+    var sentence = selectedWordData.sentence;
+    var wordAccented = addAccent(word);
+
+    document.getElementById('modal-title').innerHTML = '🤖 AI 收录：<span style="color:var(--primary);font-family:var(--font-ru)">' + accentHtml(wordAccented) + '</span>';
+    document.getElementById('modal-subtitle').textContent = '正在调用 DeepSeek 生成学习资料，请稍候…';
+    document.getElementById('modal-word').value = word;
+    document.getElementById('modal-lemma').value = '';
+    document.getElementById('modal-english').value = '';
+    document.getElementById('modal-trans').value = '';
+    document.getElementById('modal-root').value = '';
+    document.getElementById('modal-memory').value = '';
+    document.getElementById('modal-sentence').value = sentence || '';
+    document.getElementById('ai-loading-overlay').classList.add('visible');
+    document.getElementById('btn-modal-save').disabled = true;
+    document.getElementById('vocab-modal').classList.add('visible');
+
+    callDeepSeek(word, sentence).then(function(ai) {
+      document.getElementById('modal-subtitle').textContent = '✨ AI 资料已生成，请核对后保存';
+      document.getElementById('modal-trans').value = ai.translation || '';
+      document.getElementById('modal-english').value = ai.english || '';
+      var lemmaRaw = ai.lemma || '';
+      var lemmaAccented = ai.lemma_accent || lemmaRaw;
+      if (lemmaAccented && lemmaAccented !== lemmaRaw) {
+        document.getElementById('modal-lemma').value = lemmaAccented;
+      } else {
+        document.getElementById('modal-lemma').value = addAccent(lemmaRaw) || '';
+      }
+      document.getElementById('modal-root').value = ai.root_analysis || '';
+      document.getElementById('modal-memory').value = ai.memory_tip || '';
+      document.getElementById('ai-loading-overlay').classList.remove('visible');
+      document.getElementById('btn-modal-save').disabled = false;
+    }).catch(function(err) {
+      document.getElementById('ai-loading-overlay').classList.remove('visible');
+      document.getElementById('btn-modal-save').disabled = false;
+      if (err.message === 'NO_KEY') {
+        document.getElementById('modal-subtitle').innerHTML = '⚠️ 未配置 DeepSeek API Key<br><span style="font-size:11px;color:var(--text-muted)">请到「⚙️ 设置」中配置 Key，配置后 AI 将自动生成所有字段</span>';
+        showToast('请先配置 DeepSeek API Key');
+      } else {
+        document.getElementById('modal-subtitle').textContent = '⚠️ AI 生成失败：' + err.message + '，请手动填写';
+        showToast('DeepSeek 调用失败，请手动填写');
+      }
+    });
+  }
+
+  function closeModal() {
+    document.getElementById('vocab-modal').classList.remove('visible');
+    document.getElementById('ai-loading-overlay').classList.remove('visible');
+    document.getElementById('btn-modal-save').disabled = false;
+    selectedWordData = null;
+  }
+
+  function saveModal() {
+    var word = document.getElementById('modal-word').value.trim();
+    if (!word) { showToast('单词不能为空'); return; }
+
+    // Check if editing existing entry
+    var editId = selectedWordData && selectedWordData._editId;
+    if (editId) {
+      var existing = vocabulary.find(function(v) { return v.id === editId; });
+      if (existing) {
+        existing.lemma = document.getElementById('modal-lemma').value.trim();
+        existing.english = document.getElementById('modal-english').value.trim();
+        existing.translation = document.getElementById('modal-trans').value.trim();
+        existing.sentence = document.getElementById('modal-sentence').value.trim();
+        existing.root = document.getElementById('modal-root').value.trim();
+        existing.memoryTip = document.getElementById('modal-memory').value.trim();
+        saveVocabStorage();
+        hideSelectionBar();
+        closeModal();
+        renderVocabList();
+        updateStats();
+        syncVocabWordSet();
+        if (currentText) incrementalHighlight(existing);
+        showToast('「' + word + '」已更新！');
+        return;
+      }
+    }
+
+    // Create new entry
+    var lemmaVal = document.getElementById('modal-lemma').value.trim();
+    var entry = {
+      id: Date.now(),
+      word: word,
+      lemma: lemmaVal,
+      english: document.getElementById('modal-english').value.trim(),
+      translation: document.getElementById('modal-trans').value.trim(),
+      sentence: document.getElementById('modal-sentence').value.trim(),
+      root: document.getElementById('modal-root').value.trim(),
+      memoryTip: document.getElementById('modal-memory').value.trim(),
+      savedAt: new Date().toISOString()
+    };
+    vocabulary.unshift(entry);
+    saveVocabStorage();
+    hideSelectionBar();
+    closeModal();
+    renderVocabList();
+    updateStats();
+    syncVocabWordSet();
+    if (currentText) incrementalHighlight(entry);
+    showToast('「' + word + '」已收录！');
+  }
+
+  /* ===================== VOCABULARY LIST ===================== */
+  function renderVocabList() {
+    var list = document.getElementById('vocab-list');
+    document.getElementById('vocab-count').textContent = vocabulary.length + ' 词';
+
+    // Settings tab should always work, even with empty vocabulary
+    if (currentTab === 'settings') {
+      document.getElementById('vocab-search').style.display = 'none';
+      renderSettingsTab(list);
+      return;
+    }
+
+    // List tab
+    if (vocabulary.length === 0) {
+      list.innerHTML = '<div id="vocab-empty" style="display:flex;flex-direction:column;align-items:center;padding:36px 20px;color:var(--text-muted);text-align:center;gap:8px">' +
+        '<div style="font-size:32px">📒</div>' +
+        '<p style="font-size:13px;line-height:1.5">暂无生词</p>' +
+        '<p style="font-size:12px">选择文本 → 点击「🤖 AI 收录」</p>' +
+        '</div>';
+      document.getElementById('vocab-search').style.display = 'none';
+      return;
+    }
+    document.getElementById('vocab-search').style.display = 'flex';
+    renderListMode(list);
+  }
+
+  function renderListMode(list) {
+    var filter = document.getElementById('vocab-filter').value;
+    var query = (document.getElementById('search-input') && document.getElementById('search-input').value || '').toLowerCase().trim();
+    var items = vocabulary;
+    if (query) {
+      items = items.filter(function(v) {
+        return v.word.toLowerCase().indexOf(query) !== -1 ||
+               (v.translation || '').toLowerCase().indexOf(query) !== -1 ||
+               (v.english || '').toLowerCase().indexOf(query) !== -1;
+      });
+    }
+
+    if (items.length === 0) {
+      list.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-muted)">没有符合条件的单词</div>';
+      return;
+    }
+    list.innerHTML = items.map(function(v) {
+      return '<div class="vocab-card" data-id="' + v.id + '">' +
+        '<div class="vocab-top">' +
+          '<div class="vocab-word">' + escapeHtml(stripAccent(v.word)) + '</div>' +
+          '<div class="vocab-time">' + formatDateShort(v.savedAt) + '</div>' +
+        '</div>' +
+        '<div class="vocab-translation">' + escapeHtml(v.translation || '—') + '</div>' +
+        (v.english ? '<div class="vocab-translation" style="color:var(--text-muted);font-size:12px">' + escapeHtml(v.english) + '</div>' : '') +
+        (v.root ? '<div style="font-size:11.5px;color:#6d28d9;margin-top:3px">💡 ' + escapeHtml(v.root.split('|')[0]) + '</div>' : '') +
+        '<div class="vocab-actions">' +
+          '<button class="edit-btn" data-action="edit" data-id="' + v.id + '">✏️</button>' +
+          '<button class="delete-btn" data-action="delete" data-id="' + v.id + '">🗑</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function showVocabDetail(id) {
+    var v = vocabulary.find(function(x) { return x.id === id; });
+    if (!v) return;
+    var detailHtml = '<div class="vocab-detail">' +
+      '<div class="detail-header">' +
+        '<div class="detail-word">' + escapeHtml(stripAccent(v.word)) + '</div>' +
+        (v.lemma ? '<div class="detail-lemma">原型：' + accentHtml(v.lemma) + '</div>' : '') +
+      '</div>' +
+      '<div class="detail-section"><label>释义</label><div>' + escapeHtml(v.translation || '—') + '</div></div>' +
+      (v.english ? '<div class="detail-section"><label>英文</label><div>' + escapeHtml(v.english) + '</div></div>' : '') +
+      (v.root ? '<div class="detail-section"><label>词根分析</label><div>' + escapeHtml(v.root) + '</div></div>' : '') +
+      (v.memoryTip ? '<div class="detail-section"><label>记忆技巧</label><div>' + escapeHtml(v.memoryTip) + '</div></div>' : '') +
+      (v.sentence ? '<div class="detail-section"><label>例句</label><div>' + escapeHtml(v.sentence) + '</div></div>' : '') +
+      '<div class="detail-actions">' +
+        '<button class="btn btn-outline detail-close-btn">关闭</button>' +
+        '<button class="btn btn-primary detail-edit-btn" data-id="' + v.id + '">✏️ 编辑</button>' +
+      '</div>' +
+    '</div>';
+    document.getElementById('detail-content').innerHTML = detailHtml;
+    document.getElementById('detail-modal').classList.add('visible');
+  }
+
+  function closeVocabDetail() {
+    document.getElementById('detail-modal').classList.remove('visible');
+  }
+
+  function editCard(id) {
+    var v = vocabulary.find(function(x) { return x.id === id; });
+    if (!v) return;
+    document.getElementById('modal-title').textContent = '✏️ 编辑生词';
+    document.getElementById('modal-subtitle').textContent = '';
+    document.getElementById('modal-word').value = stripAccent(v.word);
+    document.getElementById('modal-lemma').value = v.lemma || '';
+    document.getElementById('modal-english').value = v.english || '';
+    document.getElementById('modal-trans').value = v.translation || '';
+    document.getElementById('modal-root').value = v.root || '';
+    document.getElementById('modal-memory').value = v.memoryTip || '';
+    document.getElementById('modal-sentence').value = v.sentence || '';
+    document.getElementById('ai-loading-overlay').classList.remove('visible');
+    document.getElementById('btn-modal-save').disabled = false;
+    document.getElementById('vocab-modal').classList.add('visible');
+    selectedWordData = Object.assign({}, v, { _editId: id });
+  }
+
+  function removeVocab(id) {
+    vocabulary = vocabulary.filter(function(v) { return v.id !== id; });
+    saveVocabStorage();
+    syncVocabWordSet();
+    renderVocabList();
+    updateStats();
+    if (currentText) renderReaderText(currentText);
+    showToast('已移除');
+  }
+
+  /* ===================== SETTINGS ===================== */
+  function renderSettingsTab(list) {
+    var keyStatus = settings.deepseekKey
+      ? '<span class="settings-api-status ok">✓ 已配置</span>'
+      : '<span class="settings-api-status none">未配置</span>';
+    list.innerHTML = '<div class="settings-section">' +
+      '<h4>🤖 DeepSeek API 设置</h4>' +
+      '<div class="settings-row"><label>API Key ' + keyStatus + '</label></div>' +
+      '<div class="settings-row">' +
+        '<label>API Key</label>' +
+        '<input type="password" id="s-deepseek-key" value="' + escapeAttr(settings.deepseekKey) + '" placeholder="sk-xxxxxxxx" />' +
+      '</div>' +
+      '<div class="settings-row">' +
+        '<label>模型</label>' +
+        '<select id="s-deepseek-model" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px;background:var(--surface-2)">' +
+          '<option value="deepseek-chat"' + (settings.deepseekModel === 'deepseek-chat' ? ' selected' : '') + '>deepseek-chat（推荐）</option>' +
+          '<option value="deepseek-coder"' + (settings.deepseekModel === 'deepseek-coder' ? ' selected' : '') + '>deepseek-coder</option>' +
+        '</select>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.7">' +
+        '· DeepSeek API Key 获取地址：<a href="https://platform.deepseek.com" target="_blank" style="color:var(--accent)">platform.deepseek.com</a><br>' +
+        '· 收录单词时，AI 将自动生成：释义、词根分析、记忆技巧、语法标注、例句' +
+      '</div>' +
+    '</div>' +
+    '<div class="settings-section">' +
+      '<h4>📊 数据管理</h4>' +
+      '<div style="display:flex;gap:6px;flex-wrap:wrap">' +
+        '<button class="btn btn-outline btn-sm" id="btn-do-backup">💾 导出备份</button>' +
+        '<label class="btn btn-outline btn-sm" style="cursor:pointer">📤 导入备份<input type="file" accept=".json" style="display:none" id="file-input-backup" /></label>' +
+        '<button class="btn btn-outline btn-sm" id="btn-clear-data" style="color:#ef4444">🗑 清空数据</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="settings-section">' +
+      '<h4>📖 关于</h4>' +
+      '<p style="font-size:12.5px;color:var(--text-muted);line-height:1.7">' +
+        'Читалка Pro v2.6 · 俄语阅读助手<br>' +
+        '核心功能：选择单词 → 🤖 AI 智能收录<br>' +
+        'DeepSeek AI 生成：释义 / 英文 / 词根 / 记忆 / 语法 / 例句' +
+      '</p>' +
+    '</div>';
+  }
+
+  /* ===================== IMPORT/EXPORT ===================== */
+  function openImportModal() { document.getElementById('import-modal').classList.add('visible'); }
+
+  function openExportModal() {
+    var modal = document.getElementById('export-modal');
+    if (!modal) return;
+    // 设置默认日期为今天
+    var today = new Date();
+    var y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
+    var todayStr = y + '-' + m + '-' + d;
+    var fromEl = document.getElementById('export-date-from');
+    var toEl = document.getElementById('export-date-to');
+    if (fromEl) fromEl.value = todayStr;
+    if (toEl) toEl.value = todayStr;
+    modal.classList.add('visible');
+  }
+  function closeExportModal() {
+    document.getElementById('export-modal').classList.remove('visible');
+  }
+  function doExportTXT() {
+    var dateFrom = document.getElementById('export-date-from').value || null;
+    var dateTo = document.getElementById('export-date-to').value || null;
+    closeExportModal();
+    exportTXT(dateFrom, dateTo);
+  }
+  function doExportJSON() {
+    var dateFrom = document.getElementById('export-date-from').value || null;
+    var dateTo = document.getElementById('export-date-to').value || null;
+    closeExportModal();
+    downloadBackup(dateFrom, dateTo);
+  }
+  function setExportToday() {
+    var today = new Date();
+    var y = today.getFullYear(), m = String(today.getMonth()+1).padStart(2,'0'), d = String(today.getDate()).padStart(2,'0');
+    var s = y + '-' + m + '-' + d;
+    document.getElementById('export-date-from').value = s;
+    document.getElementById('export-date-to').value = s;
+  }
+  function setExportThisWeek() {
+    var today = new Date();
+    var dayOfWeek = today.getDay() || 7;
+    var monday = new Date(today);
+    monday.setDate(today.getDate() - dayOfWeek + 1);
+    var y = monday.getFullYear(), m = String(monday.getMonth()+1).padStart(2,'0'), d = String(monday.getDate()).padStart(2,'0');
+    document.getElementById('export-date-from').value = y + '-' + m + '-' + d;
+    var ty = today.getFullYear(), tm = String(today.getMonth()+1).padStart(2,'0'), td = String(today.getDate()).padStart(2,'0');
+    document.getElementById('export-date-to').value = ty + '-' + tm + '-' + td;
+  }
+  function clearExportDate() {
+    document.getElementById('export-date-from').value = '';
+    document.getElementById('export-date-to').value = '';
+  }
+  function closeImportModal() {
+    document.getElementById('import-modal').classList.remove('visible');
+    document.getElementById('import-preview').innerHTML = '';
+    importParsed = [];
+    document.getElementById('btn-do-import').disabled = true;
+  }
+
+  function handleVocabImport(file) {
+    if (!file) return;
+    var filename = file.name.toLowerCase();
+    var isCSV = filename.endsWith('.csv');
+    var isTSV = filename.endsWith('.tsv');
+
+    if (isCSV || isTSV) {
+      // Handle CSV/TSV as plain text
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var text = e.target.result;
+          var delimiter = isTSV ? '\t' : ',';
+          var lines = text.split(/\r?\n/).filter(function(line) { return line.trim(); });
+          if (lines.length < 1) { showToast('文件内容为空'); return; }
+
+          // Parse header
+          var headers = parseCSVLine(lines[0], delimiter).map(function(h) { return String(h || '').toLowerCase(); });
+          var wordCol = headers.findIndex(function(h) { return h.indexOf('单词') !== -1 || h.indexOf('word') !== -1 || h.indexOf('слово') !== -1; });
+          var transCol = headers.findIndex(function(h) { return h.indexOf('释义') !== -1 || h.indexOf('翻译') !== -1 || h.indexOf('trans') !== -1; });
+
+          if (wordCol === -1 || transCol === -1) {
+            // Try first row as data (no header)
+            wordCol = 0;
+            transCol = headers.length > 1 ? 1 : -1;
+            if (transCol === -1) { showToast('未找到「单词」和「中文释义」列'); return; }
+            importParsed = lines.map(function(line) {
+              var cols = parseCSVLine(line, delimiter);
+              return { word: String(cols[wordCol] || '').trim(), translation: String(cols[transCol] || '').trim() };
+            }).filter(function(r) { return r.word; });
+          } else {
+            importParsed = lines.slice(1).map(function(line) {
+              var cols = parseCSVLine(line, delimiter);
+              return { word: String(cols[wordCol] || '').trim(), translation: String(cols[transCol] || '').trim() };
+            }).filter(function(r) { return r.word; });
+          }
+          renderImportPreview();
+        } catch(err) {
+          console.error('[Chitalka] CSV Import error:', err);
+          showToast('CSV解析失败：' + err.message);
+        }
+      };
+      reader.onerror = function() { showToast('文件读取失败'); };
+      reader.readAsText(file, 'UTF-8');
+      return;
+    }
+  }
+
+  // Helper: parse CSV line handling quoted fields
+  function parseCSVLine(line, delimiter) {
+    var result = [];
+    var current = '';
+    var inQuotes = false;
+    for (var i = 0; i < line.length; i++) {
+      var char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current);
+    return result;
+  }
+
+  function renderImportPreview() {
+    var preview = document.getElementById('import-preview');
+    if (importParsed.length === 0) { document.getElementById('btn-do-import').disabled = true; return; }
+    document.getElementById('btn-do-import').disabled = false;
+    preview.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px">' +
+      '<tr><th style="background:var(--surface-2);padding:6px 10px;text-align:left;border:1px solid var(--border)">单词</th><th style="background:var(--surface-2);padding:6px 10px;text-align:left;border:1px solid var(--border)">中文释义</th></tr>' +
+      importParsed.slice(0, 10).map(function(r) {
+        return '<tr><td style="padding:5px 10px;border:1px solid var(--border)">' + escapeHtml(r.word) + '</td><td style="padding:5px 10px;border:1px solid var(--border)">' + escapeHtml(r.translation) + '</td></tr>';
+      }).join('') +
+      (importParsed.length > 10 ? '<tr><td colspan="2" style="padding:5px 10px;color:var(--text-muted);border:1px solid var(--border)">…还有 ' + (importParsed.length - 10) + ' 条</td></tr>' : '') +
+    '</table><div style="font-size:12px;color:var(--text-muted);margin-top:6px">共 ' + importParsed.length + ' 条，确认导入？</div>';
+  }
+
+  function doImport() {
+    var count = 0;
+    importParsed.forEach(function(item) {
+      var existing = vocabulary.some(function(v) { return v.word.toLowerCase() === item.word.toLowerCase(); });
+      if (!existing) {
+        vocabulary.push({
+          id: Date.now() + Math.random(),
+          word: item.word,
+          translation: item.translation,
+          sentence: '', root: '', memoryTip: '', lemma: '',
+          savedAt: new Date().toISOString()
+        });
+        count++;
+      }
+    });
+    saveVocabStorage();
+    syncVocabWordSet();
+    renderVocabList();
+    updateStats();
+    closeImportModal();
+    showToast('成功导入 ' + count + ' 个生词');
+  }
+
+  function exportTXT(dateFrom, dateTo) {
+    if (vocabulary.length === 0) { showToast('生词本为空'); return; }
+    var filtered = vocabulary;
+    if (dateFrom || dateTo) {
+      filtered = vocabulary.filter(function(v) {
+        if (!v.savedAt) return false;
+        var d = new Date(v.savedAt);
+        if (dateFrom && d < new Date(dateFrom)) return false;
+        if (dateTo) { var end = new Date(dateTo); end.setHours(23,59,59,999); if (d > end) return false; }
+        return true;
+      });
+      if (filtered.length === 0) { showToast('所选日期范围内无生词'); return; }
+    }
+    // 按收录日期升序排列
+    var sorted = filtered.slice().sort(function(a, b) {
+      return new Date(a.savedAt || 0) - new Date(b.savedAt || 0);
+    });
+    var lines = [];
+    sorted.forEach(function(v, idx) {
+      if (idx > 0) lines.push('');
+      lines.push('─────────────────────────────');
+      // 收录日期
+      var dateStr = v.savedAt ? new Date(v.savedAt).toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '—';
+      lines.push('📅 收录日期：' + dateStr);
+      // 单词
+      lines.push('📖 单词：' + (v.word || '—'));
+      // 原型（有则显示）
+      if (v.lemma) lines.push('🔤 原型：' + v.lemma);
+      // 英文释义（有则显示）
+      if (v.english) lines.push('🇬🇧 英文：' + v.english);
+      // 释义
+      lines.push('📝 释义：' + (v.translation || '—'));
+      // 词根分析（有则显示）
+      if (v.root) lines.push('💡 词根分析：' + v.root);
+      // 记忆技巧（有则显示）
+      if (v.memoryTip) lines.push('🧠 记忆技巧：' + v.memoryTip);
+      // 原文例句（有则显示）
+      if (v.sentence) lines.push('📄 原文例句：' + v.sentence);
+    });
+    lines.push('─────────────────────────────');
+    lines.unshift('【俄语生词本】共 ' + sorted.length + ' 词 · 导出于 ' + new Date().toLocaleString('zh-CN'));
+    var text = lines.join('\n');
+    // 触发文件下载
+    var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'vocab_' + now() + '.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+    // 同时尝试复制到剪贴板
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function() {
+        showToast('✓ 已复制到剪贴板，粘贴到微信收藏即可');
+      }).catch(function() {
+        showToast('✓ 已下载 .txt 文件');
+      });
+    } else {
+      showToast('✓ 已下载 .txt 文件');
+    }
+  }
+
+  function downloadBackup(dateFrom, dateTo) {
+    var exportVocab = vocabulary;
+    if (dateFrom || dateTo) {
+      exportVocab = vocabulary.filter(function(v) {
+        if (!v.savedAt) return false;
+        var d = new Date(v.savedAt);
+        if (dateFrom && d < new Date(dateFrom)) return false;
+        if (dateTo) { var end = new Date(dateTo); end.setHours(23,59,59,999); if (d > end) return false; }
+        return true;
+      });
+      if (exportVocab.length === 0) { showToast('所选日期范围内无生词'); return; }
+    }
+    var backup = { vocabulary: exportVocab, settings: settings, exportedAt: new Date().toISOString(), version: '2.2', dateFrom: dateFrom || null, dateTo: dateTo || null };
+    var blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'chitalka_backup_' + now() + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('备份已下载 ✓');
+  }
+
+  function restoreBackup(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        if (data.vocabulary) vocabulary = data.vocabulary;
+        if (data.settings) settings = Object.assign({}, settings, data.settings);
+        saveVocabStorage();
+        syncVocabWordSet();
+        renderVocabList();
+        updateStats();
+        showToast('已恢复 ' + vocabulary.length + ' 个生词');
+      } catch(err) {
+        showToast('备份文件格式错误');
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  /* ===================== BOOKMARKS ===================== */
+  function openBookmarkModal() {
+    renderBookmarkList();
+    document.getElementById('bookmark-modal').classList.add('visible');
+  }
+
+  function closeBookmarkModal() {
+    document.getElementById('bookmark-modal').classList.remove('visible');
+  }
+
+  function deduplicateVocabByLemma() {
+    var groups = {};
+    vocabulary.forEach(function(v) {
+      if (!v.lemma) return;
+      if (!groups[v.lemma]) groups[v.lemma] = [];
+      groups[v.lemma].push(v);
+    });
+
+    var idsToRemove = new Set();
+    Object.keys(groups).forEach(function(lemmaKey) {
+      var group = groups[lemmaKey];
+      if (group.length <= 1) return;
+      group.sort(function(a, b) {
+        return new Date(b.savedAt || 0) - new Date(a.savedAt || 0);
+      });
+      for (var i = 1; i < group.length; i++) {
+        idsToRemove.add(group[i].id);
+      }
+    });
+
+    if (idsToRemove.size === 0) return 0;
+
+    vocabulary = vocabulary.filter(function(v) {
+      return !idsToRemove.has(v.id);
+    });
+    saveVocabStorage();
+    syncVocabWordSet();
+    renderVocabList();
+    updateStats();
+    if (currentText) renderReaderText(currentText);
+
+    return idsToRemove.size;
+  }
+
+  function addBookmark() {
+    if (!currentText) {
+      showToast('请先加载文档');
+      return;
+    }
+    var now = new Date();
+    var scroller = document.getElementById('reader-scroll');
+    var scrollTop = scroller.scrollTop;
+    var scrollHeight = scroller.scrollHeight - scroller.clientHeight;
+    var progress = scrollHeight > 0 ? Math.round(scrollTop / scrollHeight * 100) : 0;
+    var bookmark = {
+      id: Date.now(),
+      scrollTop: scrollTop,
+      fileName: currentFileName,
+      dateStr: formatDate(now),
+      timeStr: formatTimeHHMMSS(now),
+      progress: progress,
+      createdAt: now.toISOString()
+    };
+    bookmarks.unshift(bookmark);
+    saveVocabStorage();
+    renderBookmarkList();
+    var removed = deduplicateVocabByLemma();
+    if (removed > 0) {
+      showToast('书签已添加，并清理了 ' + removed + ' 个重复原型生词');
+    } else {
+      showToast('已添加书签 ' + bookmark.dateStr + ' ' + bookmark.timeStr + ' (' + bookmark.progress + '%)');
+    }
+  }
+
+  function deleteBookmark(id) {
+    bookmarks = bookmarks.filter(function(b) { return b.id !== id; });
+    saveVocabStorage();
+    renderBookmarkList();
+    showToast('已删除书签');
+  }
+
+  function jumpToBookmark(id) {
+    var bm = bookmarks.find(function(b) { return b.id === id; });
+    if (!bm) return;
+    var scrollEl = document.getElementById('reader-scroll');
+    if (scrollEl) scrollEl.scrollTop = bm.scrollTop;
+    closeBookmarkModal();
+    showToast('已跳转到书签位置');
+  }
+
+  function renderBookmarkList() {
+    var list = document.getElementById('bookmark-list');
+    if (bookmarks.length === 0) {
+      list.innerHTML = '<div id="bookmark-empty"><div class="empty-icon">📑</div><p>暂无书签<br><span style="font-size:12px">点击「➕ 添加书签」记录当前阅读位置</span></p></div>';
+      return;
+    }
+    list.innerHTML = bookmarks.map(function(bm) {
+      var dateLabel = bm.dateStr || (bm.createdAt ? bm.createdAt.substring(0,10) : '—');
+      var progressLabel = bm.progress !== undefined ? bm.progress + '%' : '—';
+      return '<div class="bookmark-item" data-id="' + bm.id + '">' +
+        '<span class="bookmark-icon">🔖</span>' +
+        '<div class="bookmark-info">' +
+          '<div class="bookmark-file">' + escapeHtml(bm.fileName || '未知文档') + '</div>' +
+          '<div class="bookmark-meta">' +
+            '<span class="bookmark-date">' + dateLabel + '</span>' +
+            '<span class="bookmark-time">' + bm.timeStr + '</span>' +
+            '<span class="bookmark-pos">阅读进度：' + progressLabel + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<button class="bookmark-delete" data-action="delete" data-id="' + bm.id + '" title="删除">🗑</button>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ===================== STATS ===================== */
+  function getTextWordCount() {
+    if (!currentText) return 0;
+    // Count Russian words: split by whitespace/punctuation, filter out empty strings
+    return currentText.split(/[\s\n\r\t.,!?;:()""''…«»—–-]+/).filter(function(w) { return w.length > 0; }).length;
+  }
+  function updateStats() {
+    var el2 = document.getElementById('vocab-count');
+    if (el2) el2.textContent = vocabulary.length + ' 词';
+    updateBtnStates();
+  }
+
+  function updateBtnStates() {
+    var hasVocab = vocabulary.length > 0;
+    document.getElementById('btn-backup').disabled = !hasVocab;
+  }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    if (tab === 'list') document.getElementById('tab-list-btn').classList.add('active');
+    else if (tab === 'settings') document.getElementById('btn-settings').classList.add('active');
+    renderVocabList();
+  }
+
+  /* ===================== EVENT BINDING ===================== */
+  function bindEvents() {
+    // Helper: safe addEventListener — skip if element not found
+    function safeOn(id, type, handler) {
+      var el = document.getElementById(id);
+      if (!el) { console.warn('[bindEvents] Element not found: ' + id); return; }
+      el.addEventListener(type, handler);
+    }
+
+    // TXT file input
+    safeOn('file-input-txt', 'change', function(e) {
+      if (e.target.files && e.target.files[0]) {
+        loadFile(e.target.files[0]);
+        e.target.value = ''; // allow re-selecting same file
+      }
+    });
+
+    // Import TXT button
+    safeOn('btn-import-txt', 'click', function() {
+      var fi = document.getElementById('file-input-txt');
+      if (fi) fi.click();
+    });
+
+    // Drop zone
+    var dropZone = document.getElementById('drop-zone');
+    if (dropZone) {
+      dropZone.addEventListener('dragenter', function(e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+      dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('drag-over'); });
+      dropZone.addEventListener('dragleave', function(e) { e.preventDefault(); dropZone.classList.remove('drag-over'); });
+      dropZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          loadFile(e.dataTransfer.files[0]);
+        }
+      });
+    }
+
+    // Text selection
+    safeOn('reader-scroll', 'mouseup', handleTextSelection);
+
+    // Selection bar buttons
+    safeOn('btn-ai-collect', 'click', openModalWithAI);
+    safeOn('btn-translate', 'click', openTranslationModal);
+    safeOn('btn-close-bar', 'click', hideSelectionBar);
+
+    // Click outside to hide bar
+    document.addEventListener('mousedown', function(e) {
+      var bar = document.getElementById('selection-bar');
+      var modal = document.getElementById('vocab-modal');
+      if (bar && modal && !bar.contains(e.target) && !modal.contains(e.target)) {
+        hideSelectionBar();
+      }
+    });
+
+    // Modal buttons
+    safeOn('btn-modal-cancel', 'click', closeModal);
+    safeOn('btn-modal-save', 'click', saveModal);
+
+    // Detail modal delegation (close / edit)
+    safeOn('detail-modal', 'click', function(e) {
+      if (e.target.closest('.detail-close-btn')) { closeVocabDetail(); return; }
+      var editBtn = e.target.closest('.detail-edit-btn');
+      if (editBtn && editBtn.dataset.id) { editCard(parseInt(editBtn.dataset.id, 10)); closeVocabDetail(); }
+    });
+    safeOn('detail-modal', 'mousedown', function(e) {
+      var dm = document.getElementById('detail-modal');
+      if (dm && e.target === dm) closeVocabDetail();
+    });
+
+    // Vocab list delegation
+    safeOn('vocab-list', 'click', function(e) {
+      var btn = e.target.closest('[data-action]');
+      if (btn) {
+        var id = parseInt(btn.dataset.id, 10);
+        var action = btn.dataset.action;
+        if (action === 'edit') editCard(id);
+        else if (action === 'delete') { if (confirm('确认删除？')) removeVocab(id); }
+        return;
+      }
+      var card = e.target.closest('.vocab-card');
+      if (card && card.dataset.id) {
+        var id = parseInt(card.dataset.id, 10);
+        showVocabDetail(id);
+      }
+    });
+
+    // Review buttons delegation — removed (review feature deleted)
+
+    // Sidebar tabs
+    safeOn('tab-list-btn', 'click', function() { switchTab('list'); });
+
+    // Header buttons
+    safeOn('btn-import-vocab', 'click', openImportModal);
+    safeOn('btn-backup', 'click', openExportModal);
+    safeOn('btn-settings', 'click', function() { switchTab('settings'); });
+
+    // Settings panel interactions
+    safeOn('vocab-list', 'click', function(e) {
+      var backupBtn = e.target.closest('#btn-do-backup');
+      if (backupBtn) { downloadBackup(); return; }
+      var clearBtn = e.target.closest('#btn-clear-data');
+      if (clearBtn) {
+        if (confirm('确认清空所有数据？此操作不可恢复！')) {
+          vocabulary = [];
+          saveVocabStorage();
+          renderVocabList();
+          showToast('已清空');
+        }
+        return;
+      }
+    });
+
+    // Settings input changes
+    safeOn('vocab-list', 'change', function(e) {
+      if (e.target.id === 's-deepseek-key') {
+        settings.deepseekKey = e.target.value;
+        saveVocabStorage();
+      }
+      if (e.target.id === 's-deepseek-model') {
+        settings.deepseekModel = e.target.value;
+        saveVocabStorage();
+      }
+    });
+
+    // Backup file input
+    safeOn('file-input-backup', 'change', function(e) {
+      if (e.target.files && e.target.files[0]) {
+        restoreBackup(e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+
+    // Import modal
+    safeOn('import-drop', 'click', function() {
+      var fi = document.getElementById('file-input-vocab');
+      if (fi) fi.click();
+    });
+    safeOn('file-input-vocab', 'change', function(e) {
+      if (e.target.files && e.target.files[0]) {
+        handleVocabImport(e.target.files[0]);
+        e.target.value = '';
+      }
+    });
+    safeOn('import-modal', 'click', function(e) {
+      if (e.target.closest('#btn-import-cancel')) { closeImportModal(); return; }
+      if (e.target.closest('#btn-do-import')) { doImport(); }
+    });
+    safeOn('import-modal', 'mousedown', function(e) {
+      var im = document.getElementById('import-modal');
+      if (im && e.target === im) closeImportModal();
+    });
+
+    // Export modal
+    safeOn('export-modal', 'mousedown', function(e) {
+      var em = document.getElementById('export-modal');
+      if (em && e.target === em) closeExportModal();
+    });
+    safeOn('btn-export-cancel', 'click', closeExportModal);
+    safeOn('btn-export-txt-modal', 'click', doExportTXT);
+    safeOn('btn-export-json', 'click', doExportJSON);
+    safeOn('btn-set-today', 'click', setExportToday);
+    safeOn('btn-set-thisweek', 'click', setExportThisWeek);
+    safeOn('btn-clear-date', 'click', clearExportDate);
+
+    // Translate modal
+    safeOn('translate-modal', 'mousedown', function(e) {
+      var tm = document.getElementById('translate-modal');
+      if (tm && e.target === tm) closeTranslationModal();
+    });
+    safeOn('btn-translate-close', 'click', closeTranslationModal);
+
+    // Bookmark modal
+    safeOn('btn-bookmark', 'click', openBookmarkModal);
+    safeOn('btn-bookmark-close', 'click', closeBookmarkModal);
+    safeOn('btn-bookmark-add', 'click', addBookmark);
+    safeOn('bookmark-modal', 'mousedown', function(e) {
+      var bm = document.getElementById('bookmark-modal');
+      if (bm && e.target === bm) closeBookmarkModal();
+    });
+    safeOn('bookmark-list', 'click', function(e) {
+      var delBtn = e.target.closest('.bookmark-delete');
+      if (delBtn && delBtn.dataset.id) {
+        if (confirm('确认删除此书签？')) {
+          deleteBookmark(parseInt(delBtn.dataset.id, 10));
+        }
+        return;
+      }
+      var item = e.target.closest('.bookmark-item');
+      if (item && item.dataset.id) {
+        jumpToBookmark(parseInt(item.dataset.id, 10));
+      }
+    });
+
+    // Font controls
+    safeOn('font-select', 'change', function(e) {
+      document.body.className = document.body.className.replace(/font-\w+\s?/g, '');
+      document.body.classList.add('font-' + e.target.value);
+      localStorage.setItem('chitalka_font', e.target.value);
+    });
+
+    // Font size slider — reads from DOM every time, no parameters needed
+    window.handleFontSize = function() {
+      var slider = document.getElementById('font-size-slider');
+      if (!slider) return;
+      var val = slider.value;
+      var readerText = document.getElementById('reader-text');
+      if (readerText) readerText.style.fontSize = val + 'px';
+      var valEl = document.getElementById('font-size-val');
+      if (valEl) valEl.textContent = val + 'px';
+      localStorage.setItem('chitalka_fontsize', val);
+    };
+
+    // Bold toggle
+    window.handleFontBold = function() {
+      var readerText = document.getElementById('reader-text');
+      var btn = document.getElementById('bold-btn');
+      if (!readerText || !btn) return;
+      var isBold = readerText.style.fontWeight === 'bold';
+      readerText.style.fontWeight = isBold ? 'normal' : 'bold';
+      btn.classList.toggle('active', !isBold);
+      localStorage.setItem('chitalka_bold', isBold ? '0' : '1');
+    };
+
+    // Line height toggle
+    window.handleLineHeight = function() {
+      var slider = document.getElementById('line-height-slider');
+      if (!slider) return;
+      var val = slider.value;
+      document.documentElement.style.setProperty('--reader-line-height', val);
+      var valEl = document.getElementById('line-height-val');
+      if (valEl) valEl.textContent = val;
+      localStorage.setItem('chitalka_lineheight', val);
+    };
+
+    // Search
+    safeOn('search-input', 'input', function() {
+      if (currentTab === 'list') renderVocabList();
+    });
+    safeOn('vocab-filter', 'change', function() {
+      if (currentTab === 'list') renderVocabList();
+    });
+
+    // Reading progress — save scroll position on scroll (debounced)
+    var scrollTimer;
+    var readerScroll = document.getElementById('reader-scroll');
+    if (readerScroll) {
+      readerScroll.addEventListener('scroll', function() {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(function() {
+          if (currentText) saveVocabStorage();
+        }, 500);
+      });
+    }
+
+    // Save progress before leaving page
+    window.addEventListener('beforeunload', function() {
+      if (currentText) saveVocabStorage();
+    });
+  }
+
+  /* ===================== INIT ===================== */
+  function init() {
+    console.log('[Chitalka] Initializing...');
+    loadFromStorage();
+
+    var savedFont = localStorage.getItem('chitalka_font');
+    if (savedFont) {
+      document.body.classList.add('font-' + savedFont);
+      var fontEl = document.getElementById('font-select');
+      if (fontEl) fontEl.value = savedFont;
+    }
+    var savedSize = localStorage.getItem('chitalka_fontsize');
+    if (savedSize) {
+      document.getElementById('font-size-slider').value = savedSize;
+      document.getElementById('font-size-val').textContent = savedSize + 'px';
+      var readerText = document.getElementById('reader-text');
+      if (readerText) {
+        readerText.style.fontSize = savedSize + 'px';
+      }
+    }
+    var savedBold = localStorage.getItem('chitalka_bold');
+    if (savedBold === '1') {
+      var rt = document.getElementById('reader-text');
+      if (rt) rt.style.fontWeight = 'bold';
+      var bb = document.getElementById('bold-btn');
+      if (bb) bb.classList.add('active');
+    }
+    var savedLH = localStorage.getItem('chitalka_lineheight');
+    if (savedLH) {
+      document.documentElement.style.setProperty('--reader-line-height', savedLH);
+      var lhSlider = document.getElementById('line-height-slider');
+      if (lhSlider) lhSlider.value = savedLH;
+      var lhVal = document.getElementById('line-height-val');
+      if (lhVal) lhVal.textContent = savedLH;
+    }
+
+    bindEvents();
+    renderVocabList();
+    updateStats();
+    console.log('[Chitalka] Ready. Vocabulary:', vocabulary.length, 'words');
+  }
+
+  // Run init when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  /* ===================== QRCODE MODAL ===================== */
+  function showQrcodeModal() {
+    var modal = document.getElementById('qrcode-modal');
+    modal.classList.add('visible');
+  }
+  function closeQrcodeModal() {
+    document.getElementById('qrcode-modal').classList.remove('visible');
+  }
+
+  // 绑定事件
+  var btnShow = document.getElementById('btn-show-qrcode');
+  if (btnShow) {
+    btnShow.addEventListener('click', function(e) {
+      e.preventDefault();
+      showQrcodeModal();
+    });
+  }
+  var btnClose = document.getElementById('btn-close-qrcode');
+  if (btnClose) {
+    btnClose.addEventListener('click', closeQrcodeModal);
+  }
+  var qrcodeModal = document.getElementById('qrcode-modal');
+  if (qrcodeModal) {
+    qrcodeModal.addEventListener('click', function(e) {
+      if (e.target === this) closeQrcodeModal();
+    });
+  }
+
+})();
+</script>
+</body>
+</html>
