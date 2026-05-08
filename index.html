@@ -102,6 +102,14 @@
       border-color: var(--primary);
       color: #fff;
     }
+    .toolbar-sep {
+      display: inline-block;
+      width: 1px;
+      height: 18px;
+      background: var(--border);
+      margin: 0 4px;
+      vertical-align: middle;
+    }
     .line-height-slider { width: 60px; accent-color: var(--primary); cursor: pointer; }
 
     /* Accent mark */
@@ -374,6 +382,9 @@
         <span id="line-height-val" style="font-size:11px;color:var(--text-muted)">2.0</span>
         <button id="bold-btn" class="ctrl-btn" onclick="handleFontBold()" title="加粗">B</button>
         <button id="btn-bookmark" class="ctrl-btn" title="书签">🔖</button>
+        <span class="toolbar-sep"></span>
+        <button id="btn-mode-normal" class="ctrl-btn active" onclick="setReadMode('normal')" title="普通模式">📖 普通</button>
+        <button id="btn-mode-dialysis" class="ctrl-btn" onclick="setReadMode('dialysis')" title="透析模式">🔬 透析</button>
       </div>
 
     </div>
@@ -606,6 +617,8 @@
   };
   var bookmarks = [];
   var vocabWordSet = null; // 全局 Set，加速生词查找
+  var readMode = 'normal';            // 'normal' | 'dialysis'
+  var lastVocabAddTime = null;        // 上次收录生词的时间戳（毫秒），用于透析模式
 
   /* ===================== UTILS ===================== */
   var VOWELS = ['а','е','ё','и','о','у','ы','э','ю','я','А','Е','Ё','И','О','У','Ы','Э','Ю','Я'];
@@ -741,6 +754,13 @@
       console.warn('Storage load failed:', e);
     }
     syncVocabWordSet();
+    // 初始化透析模式计时基准：取生词本中最近一条的 savedAt
+    if (vocabulary.length > 0) {
+      var latest = vocabulary[0];
+      if (latest.savedAt) {
+        lastVocabAddTime = new Date(latest.savedAt).getTime();
+      }
+    }
     restoreReadingProgress();
   }
 
@@ -750,6 +770,16 @@
     vocabulary.forEach(function(v) {
       vocabWordSet.add(v.word.toLowerCase());
     });
+  }
+
+  /* 透析模式：切换阅读模式 */
+  function setReadMode(mode) {
+    readMode = mode;
+    var btnNormal = document.getElementById('btn-mode-normal');
+    var btnDialysis = document.getElementById('btn-mode-dialysis');
+    if (btnNormal) btnNormal.classList.toggle('active', mode === 'normal');
+    if (btnDialysis) btnDialysis.classList.toggle('active', mode === 'dialysis');
+    showToast(mode === 'dialysis' ? '已切换到透析模式' : '已切换到普通模式');
   }
 
   /* ===================== FILE LOADING ===================== */
@@ -936,9 +966,16 @@
   function handleWordClick(word, sentence) {
     var existing = vocabulary.find(function(v) { return v.word.toLowerCase() === word.toLowerCase(); });
     if (existing) {
-      // 已收录：显示详情而非仅提示
+      // 已收录：直接显示详情，不计入透析间隔
       showVocabDetail(existing.id);
       return;
+    }
+    // 透析模式：检查距上次收录是否满 1 分钟
+    if (readMode === 'dialysis') {
+      if (lastVocabAddTime !== null && (Date.now() - lastVocabAddTime) < 60000) {
+        showToast('透析模式下查阅生词间隔不少于1分钟');
+        return;
+      }
     }
     selectedWordData = { word: word, sentence: sentence };
     openModalWithAI();
@@ -1142,12 +1179,17 @@
         existing.memoryTip = document.getElementById('modal-memory').value.trim();
         saveVocabStorage();
         hideSelectionBar();
-        closeModal();
         renderVocabList();
         updateStats();
         syncVocabWordSet();
         if (currentText) incrementalHighlight(existing);
         showToast('「' + word + '」已更新！');
+        // 按钮保持禁用，直到用户关闭弹窗（closeModal 会重置）
+        var saveBtn = document.getElementById('btn-modal-save');
+        if (saveBtn) {
+          saveBtn.textContent = '✅ 已保存';
+          saveBtn.disabled = true;
+        }
         return;
       }
     }
@@ -1166,14 +1208,21 @@
       savedAt: new Date().toISOString()
     };
     vocabulary.unshift(entry);
+    if (selectedWordData) selectedWordData._editId = entry.id; // 标记已收录，防止重复保存
+    lastVocabAddTime = Date.now();  // 透析模式：更新收录计时基准
     saveVocabStorage();
     hideSelectionBar();
-    closeModal();
     renderVocabList();
     updateStats();
     syncVocabWordSet();
     if (currentText) incrementalHighlight(entry);
     showToast('「' + word + '」已收录！');
+    // 按钮保持禁用，直到用户关闭弹窗（closeModal 会重置）
+    var saveBtn = document.getElementById('btn-modal-save');
+    if (saveBtn) {
+      saveBtn.textContent = '✅ 已保存';
+      saveBtn.disabled = true;
+    }
   }
 
   /* ===================== VOCABULARY LIST ===================== */
@@ -1977,6 +2026,9 @@
       if (valEl) valEl.textContent = val;
       localStorage.setItem('chitalka_lineheight', val);
     };
+
+    // 透析模式切换
+    window.setReadMode = setReadMode;
 
     // Search
     safeOn('search-input', 'input', function() {
