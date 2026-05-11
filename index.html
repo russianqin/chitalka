@@ -1507,7 +1507,12 @@
     document.getElementById('modal-memory').value = '';
     document.getElementById('modal-sentence').value = sentence || '';
     document.getElementById('ai-loading-overlay').classList.add('visible');
-    document.getElementById('btn-modal-save').disabled = true;
+    // 重置按钮状态
+    var saveBtn = document.getElementById('btn-modal-save');
+    if (saveBtn) {
+      saveBtn.textContent = '💾 保存';
+      saveBtn.disabled = true;  // AI 生成期间禁用
+    }
     document.getElementById('vocab-modal').classList.add('visible');
 
     callDeepSeek(word, sentence).then(function(ai) {
@@ -1541,7 +1546,12 @@
   function closeModal() {
     document.getElementById('vocab-modal').classList.remove('visible');
     document.getElementById('ai-loading-overlay').classList.remove('visible');
-    document.getElementById('btn-modal-save').disabled = false;
+    // 重置按钮状态
+    var saveBtn = document.getElementById('btn-modal-save');
+    if (saveBtn) {
+      saveBtn.textContent = '💾 保存';
+      saveBtn.disabled = false;
+    }
     selectedWordData = null;
   }
 
