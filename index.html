@@ -13,7 +13,7 @@
       --success: #15803d; --success-light: #f0fdf4;
       --ai-bg: #f0fdf4; --ai-border: #86efac; --ai-text: #15803d;
       --text: #1c1917; --text-2: #57534e; --text-muted: #a8a29e;
-      --sidebar-w: 360px; --header-h: 56px;
+      --sidebar-w: 360px; --sidebar-collapsed-w: 40px; --header-h: 56px;
       --radius: 10px; --radius-sm: 6px;
       --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.05);
       --shadow-lg: 0 8px 30px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08);
@@ -208,7 +208,7 @@
     #selection-bar .sel-word { font-size: 15px; font-weight: 700; color: var(--primary); font-family: var(--font-ru); margin-right: 4px; }
 
     /* ===== SIDEBAR ===== */
-    #sidebar { width: var(--sidebar-w); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; border-left: 1px solid var(--border); flex-shrink: 0; }
+    #sidebar { width: var(--sidebar-w); background: var(--surface); display: flex; flex-direction: column; overflow: hidden; border-left: 1px solid var(--border); flex-shrink: 0; transition: width var(--transition); }
     #sidebar-header { padding: 12px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; background: var(--surface-2); }
     #sidebar-header h2 { font-size: 14px; font-weight: 600; flex: 1; }
     #vocab-count { font-size: 11px; color: var(--text-muted); background: var(--border); padding: 2px 8px; border-radius: 10px; }
@@ -354,7 +354,85 @@
     #bookmark-empty .empty-icon { font-size: 40px; margin-bottom: 10px; }
     #bookmark-empty p { font-size: 13px; }
 
-    @media (max-width: 700px) { :root { --sidebar-w: 100%; } main { flex-direction: column; } #sidebar { width: 100%; height: 50vh; border-left: none; border-top: 1px solid var(--border); } }
+    /* ===== SIDEBAR COLLAPSED STATE ===== */
+    #sidebar.collapsed {
+      width: var(--sidebar-collapsed-w);
+      min-width: var(--sidebar-collapsed-w);
+    }
+
+    #sidebar.collapsed #sidebar-header h2,
+    #sidebar.collapsed #sidebar-header #vocab-count,
+    #sidebar.collapsed #sidebar-tabs,
+    #sidebar.collapsed #vocab-search,
+    #sidebar.collapsed #vocab-list,
+    #sidebar.collapsed #sidebar-footer {
+      display: none;
+    }
+
+    #sidebar.collapsed #sidebar-header {
+      padding: 12px 4px;
+      justify-content: center;
+      border-bottom: none;
+    }
+
+    #sidebar.collapsed .sidebar-toggle-btn {
+      margin-left: 0;
+      padding: 4px;
+      width: 100%;
+      height: 32px;
+    }
+
+    /* ===== SIDEBAR TOGGLE BUTTON ===== */
+    .sidebar-toggle-btn {
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 4px;
+      padding: 4px 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 14px;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      min-width: 28px;
+      height: 28px;
+    }
+
+    .sidebar-toggle-btn:hover {
+      background: var(--surface-2);
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .sidebar-toggle-btn .toggle-icon {
+      display: inline-block;
+    }
+
+    @media (max-width: 700px) {
+      :root { --sidebar-w: 100%; --sidebar-collapsed-w: 100%; }
+      main { flex-direction: column; }
+      #sidebar {
+        width: 100%;
+        height: 50vh;
+        border-left: none;
+        border-top: 1px solid var(--border);
+        transition: height var(--transition);
+      }
+      #sidebar.collapsed {
+        width: 100%;
+        height: 0;
+        min-height: 0;
+        border-top: none;
+        overflow: hidden;
+      }
+      #sidebar.collapsed #sidebar-header {
+        padding: 12px 14px;
+        justify-content: flex-start;
+        border-bottom: 1px solid var(--border);
+      }
+    }
 
     /* ===== SIDEBAR FOOTER ===== */
     #sidebar-footer {
@@ -471,6 +549,9 @@
     <div id="sidebar-header">
       <h2>📓 生词本</h2>
       <span id="vocab-count">0 词</span>
+      <button id="btn-toggle-sidebar" class="sidebar-toggle-btn" title="折叠生词本 (Ctrl+B)">
+        <span class="toggle-icon">▶</span>
+      </button>
     </div>
     <div id="sidebar-tabs">
       <button class="tab-btn active" id="tab-list-btn">📋 列表</button>
@@ -678,12 +759,16 @@
   var settings = {
     deepseekKey: '',
     deepseekModel: 'deepseek-chat',
-    deepseekBaseUrl: 'https://api.deepseek.com'
+    deepseekBaseUrl: 'https://api.deepseek.com',
+    dialysisInterval: 60000  // 默认 1 分钟（毫秒）
   };
   var bookmarks = [];
   var vocabWordSet = null; // 全局 Set，加速生词查找
   var readMode = 'normal';            // 'normal' | 'dialysis'
   var lastVocabAddTime = null;        // 上次收录生词的时间戳（毫秒），用于透析模式
+
+  // 新增：sidebar 折叠状态
+  var isSidebarCollapsed = false;
 
   /* ===================== UTILS ===================== */
   var VOWELS = ['а','е','ё','и','о','у','ы','э','ю','я','А','Е','Ё','И','О','У','Ы','Э','Ю','Я'];
@@ -805,6 +890,61 @@
       showToast('已自动迁移旧书籍数据');
     } catch (e) {
       console.warn('Migration failed:', e);
+    }
+  }
+
+  /* ===================== SIDEBAR TOGGLE ===================== */
+  function toggleSidebar() {
+    var sidebar = document.getElementById('sidebar');
+    var btn = document.getElementById('btn-toggle-sidebar');
+    if (!sidebar || !btn) return;
+
+    isSidebarCollapsed = !isSidebarCollapsed;
+    sidebar.classList.toggle('collapsed', isSidebarCollapsed);
+
+    // 更新按钮图标和标题
+    var icon = btn.querySelector('.toggle-icon');
+    if (isSidebarCollapsed) {
+      icon.textContent = '◀';  // 向左箭头，表示点击可展开
+      btn.title = '展开生词本 (Ctrl+B)';
+    } else {
+      icon.textContent = '▶';  // 向右箭头，表示点击可折叠
+      btn.title = '折叠生词本 (Ctrl+B)';
+    }
+
+    // 保存到 localStorage
+    try {
+      localStorage.setItem('chitalka_sidebar_collapsed', isSidebarCollapsed ? '1' : '0');
+    } catch (e) {
+      console.warn('Save sidebar state failed:', e);
+    }
+  }
+
+  function loadSidebarState() {
+    try {
+      var saved = localStorage.getItem('chitalka_sidebar_collapsed');
+      if (saved === '1') {
+        isSidebarCollapsed = true;
+        var sidebar = document.getElementById('sidebar');
+        var btn = document.getElementById('btn-toggle-sidebar');
+        if (sidebar) sidebar.classList.add('collapsed');
+        if (btn) {
+          var icon = btn.querySelector('.toggle-icon');
+          if (icon) icon.textContent = '◀';
+          btn.title = '展开生词本 (Ctrl+B)';
+        }
+      }
+    } catch (e) {
+      console.warn('Load sidebar state failed:', e);
+    }
+  }
+
+  /* ===================== KEYBOARD SHORTCUTS ===================== */
+  function handleKeyboardShortcuts(e) {
+    // Ctrl+B: 切换 sidebar
+    if (e.ctrlKey && e.key === 'b') {
+      e.preventDefault();  // 阻止默认行为（书签）
+      toggleSidebar();
     }
   }
 
@@ -1353,10 +1493,11 @@
       showVocabDetail(existing.id);
       return;
     }
-    // 透析模式：检查距上次收录是否满 1 分钟
+    // 透析模式：检查距上次收录是否满设定间隔
     if (readMode === 'dialysis') {
-      if (lastVocabAddTime !== null && (Date.now() - lastVocabAddTime) < 60000) {
-        showToast('透析模式下查阅生词间隔不少于1分钟');
+      if (lastVocabAddTime !== null && (Date.now() - lastVocabAddTime) < settings.dialysisInterval) {
+        var intervalSec = Math.round(settings.dialysisInterval / 1000);
+        showToast('透析模式下查阅生词间隔不少于' + intervalSec + '秒');
         return;
       }
     }
@@ -1732,6 +1873,17 @@
   }
 
   /* ===================== SETTINGS ===================== */
+  // 透析模式间隔更新函数
+  window.updateDialysisInterval = function() {
+    var slider = document.getElementById('s-dialysis-interval');
+    var display = document.getElementById('dialysis-interval-display');
+    if (!slider || !display) return;
+    var seconds = parseInt(slider.value, 10);
+    settings.dialysisInterval = seconds * 1000;
+    display.textContent = seconds + '秒';
+    saveVocabStorage();
+  };
+
   function renderSettingsTab(list) {
     var keyStatus = settings.deepseekKey
       ? '<span class="settings-api-status ok">✓ 已配置</span>'
@@ -1753,6 +1905,18 @@
       '<div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.7">' +
         '· DeepSeek API Key 获取地址：<a href="https://platform.deepseek.com" target="_blank" style="color:var(--accent)">platform.deepseek.com</a><br>' +
         '· 收录单词时，AI 将自动生成：释义、词根分析、记忆技巧、语法标注、例句' +
+      '</div>' +
+    '</div>' +
+    '<div class="settings-section">' +
+      '<h4>🔬 透析模式设置</h4>' +
+      '<div class="settings-row">' +
+        '<label>查阅间隔</label>' +
+        '<input type="range" id="s-dialysis-interval" min="30" max="600" step="10" value="' + (settings.dialysisInterval / 1000) + '" oninput="updateDialysisInterval()" />' +
+        '<span id="dialysis-interval-display">' + (settings.dialysisInterval / 1000) + '秒</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--text-muted);margin-top:4px;line-height:1.6">' +
+        '设置两次查阅生词之间的最短间隔时间<br>' +
+        '范围：30秒 ~ 10分钟' +
       '</div>' +
     '</div>' +
     '<div class="settings-section">' +
@@ -2427,6 +2591,7 @@
     bindEvents();
     renderVocabList();
     updateStats();
+    loadSidebarState();
     console.log('[Chitalka] Ready. Vocabulary:', vocabulary.length, 'words');
   }
 
@@ -2464,6 +2629,15 @@
       if (e.target === this) closeQrcodeModal();
     });
   }
+
+  // ===== Sidebar toggle events =====
+  var btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+  if (btnToggleSidebar) {
+    btnToggleSidebar.addEventListener('click', toggleSidebar);
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', handleKeyboardShortcuts);
 
 })();
 </script>
